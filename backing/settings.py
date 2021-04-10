@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'imagekit',
     'reversion',
 ]
 
@@ -120,3 +119,5 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(SITE_ROOT, "static")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(SITE_ROOT, 'media')
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
