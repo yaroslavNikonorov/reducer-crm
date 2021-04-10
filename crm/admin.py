@@ -228,7 +228,7 @@ class OrderGroupSentInline(admin.TabularInline):
 
 
 @admin.register(OrderGroup)
-class OrderGroupAdmin(admin.ModelAdmin):
+class OrderGroupAdmin(VersionAdmin):
     # fields = ["name", "orders_list"]
     readonly_fields = ['get_sum']
     inlines = [OrderGroupNotSentInline, OrderGroupSentInline]
@@ -268,7 +268,7 @@ class OrderInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(VersionAdmin):
     readonly_fields = ['order_group_url']
     inlines = [OrderInline]
 
