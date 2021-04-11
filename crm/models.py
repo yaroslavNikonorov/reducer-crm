@@ -38,9 +38,6 @@ class SpoolModel(models.Model):
     model = models.ForeignKey(Model, on_delete=models.CASCADE)
     name = models.CharField(max_length=200, null=True, blank=True, unique=False, default="")
     size = models.IntegerField(default=10000, null=True, blank=True)
-    D1 = models.FloatField(default=1.0, help_text="Spool D1")
-    D2 = models.FloatField()
-    H1 = models.FloatField()
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
     description = models.TextField(null=True, blank=True)
@@ -50,6 +47,26 @@ class SpoolModel(models.Model):
 
     def __str__(self):
         return "{} {}".format(self.model, str(self.size))
+
+
+class SpoolDimension(models.Model):
+    actual = models.BooleanField(default=False)
+    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE)
+    D1 = models.FloatField(default=1.0, help_text="Spool D1", null=False)
+    D2 = models.FloatField(default=1.0, help_text="Spool D2", null=False)
+    H1 = models.FloatField(default=1.0, help_text="Spool H1", null=False)
+    description = models.CharField(max_length=200, null=True, blank=True, unique=False, default="")
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.actual:
+            # select all other active items
+            qs = type(self).objects.filter(actual=True)
+            # except self (if self already exists)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            # and deactive them
+            qs.update(actual=False)
+        super().save(force_insert, force_update, using, update_fields)
 
 
 class SpoolModelImage(models.Model):
@@ -66,9 +83,6 @@ class SpoolModelImage(models.Model):
 class ReducerModel(models.Model):
     spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE, null=False)
     line = models.ForeignKey(Line, default=1, on_delete=models.CASCADE, null=False)
-    D3 = models.FloatField()
-    D4 = models.FloatField()
-    H2 = models.FloatField()
     description = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -78,6 +92,26 @@ class ReducerModel(models.Model):
 
     def __str__(self):
         return "{} {}".format(self.spool_model, self.line)
+
+
+class ReducerDimension(models.Model):
+    actual = models.BooleanField(default=False)
+    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE)
+    D3 = models.FloatField(default=1.0, help_text="Spool D3", null=False)
+    D4 = models.FloatField(default=1.0, help_text="Spool D4", null=False)
+    H2 = models.FloatField(default=1.0, help_text="Spool H2", null=False)
+    description = models.CharField(max_length=200, null=True, blank=True, unique=False, default="")
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.actual:
+            # select all other active items
+            qs = type(self).objects.filter(actual=True)
+            # except self (if self already exists)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            # and deactive them
+            qs.update(actual=False)
+        super().save(force_insert, force_update, using, update_fields)
 
 
 class ReducerModelImage(models.Model):
@@ -146,7 +180,6 @@ class Order(models.Model):
 
     def get_order_sum(self):
         return sum([item.get_item_sum() for item in self.get_order_items()])
-
 
 
 class OrderItem(models.Model):

@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
 from crm.models import Order, SpoolModel, Line, Price, Manufacturer, Model, ReducerModel, OrderGroup, SpoolModelImage, \
-    ReducerModelImage, OrderItem
+    ReducerModelImage, OrderItem, SpoolDimension, ReducerDimension
 
 
 def get_admin_url(instance):
@@ -84,15 +84,37 @@ class SpoolModelImageInline(admin.TabularInline):
     image_preview.short_description = "Image"
 
 
-class SpoolModelInline(admin.TabularInline):
+class SpoolModelDimInline(admin.TabularInline):
+    extra = 0
+    model = SpoolDimension
+    # verbose_name = ''
+    # verbose_name_plural = ''
+    # max_num = 1
+    # list_display = ['__str__']
+    # fields = ['name', 'line', 'D3', 'D4', 'H2']
+    # readonly_fields = ['name', 'line', 'D3', 'D4', 'H2']
+
+    # def has_add_permission(self, request, obj=None):
+    #     return False
+    #
+    # def has_delete_permission(self, request, obj=None):
+    #     return False
+    #
+    # def name(self, inst):
+    #     return mark_safe('<a href="{url}">{name}</a>'.format(url=get_admin_url(inst), name=str(inst)))
+
+
+class SpoolModelReducerInline(admin.TabularInline):
     extra = 0
     model = ReducerModel
     verbose_name = ''
     # verbose_name_plural = ''
     # max_num = 1
     # list_display = ['__str__']
-    fields = ['name', 'line', 'D3', 'D4', 'H2']
-    readonly_fields = ['name', 'line', 'D3', 'D4', 'H2']
+    fields = ['name']
+    # fields = ['name', 'line', 'D3', 'D4', 'H2']
+    # readonly_fields = ['name', 'line', 'D3', 'D4', 'H2']
+    readonly_fields = ['name']
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -106,10 +128,10 @@ class SpoolModelInline(admin.TabularInline):
 
 @admin.register(SpoolModel)
 class SpoolModelAdmin(VersionAdmin):
-    inlines = [SpoolModelInline, SpoolModelImageInline]
+    inlines = [SpoolModelDimInline, SpoolModelReducerInline, SpoolModelImageInline]
     fieldsets = [
         ("SpoolModel", {'fields': ['model', 'name', 'size']}),
-        ("Dimensions", {'fields': ['D1', 'D2', 'H1']}),
+        # ("Dimensions", {'fields': ['D1', 'D2', 'H1']}),
         # ('Relations', {'fields': ['relation_list']}),
     ]
 
@@ -144,15 +166,21 @@ class ReducerModelImageInline(admin.TabularInline):
     image_preview.short_description = "Image"
 
 
+class ReducerModelDimInline(admin.TabularInline):
+    extra = 0
+    model = ReducerDimension
+
+
 @admin.register(ReducerModel)
 class ReducerModelAdmin(VersionAdmin):
-    inlines = [ReducerModelImageInline]
+    inlines = [ReducerModelDimInline, ReducerModelImageInline]
     # fields = ['spool_d1']
-    readonly_fields = ("spool_name", "spool_d1", "spool_d2", "spool_h1",)
+    readonly_fields = ("spool_name", "spool_d1", "spool_d2", "spool_h1",'reducer_d3', 'reducer_d4', 'reducer_h2')
     fieldsets = [
         ("SpoolModel", {'fields': [("spool_model", "spool_name")]}),
         ("Line", {"fields": ["line"]}),
-        ("Reducer Dimensions", {'fields': ['spool_d1', 'spool_d2', 'D3', 'D4', 'spool_h1', 'H2']}),
+        # ("Reducer Dimensions", {'fields': ['spool_d1', 'spool_d2', 'D3', 'D4', 'spool_h1', 'H2']}),
+        ("Reducer Dimensions", {'fields': ['spool_d1', 'spool_d2', 'reducer_d3', 'reducer_d4', 'spool_h1', 'reducer_h2']}),
         # ('Relations', {'fields': ['relation_list']}),
     ]
 
@@ -162,20 +190,46 @@ class ReducerModelAdmin(VersionAdmin):
 
     spool_name.short_description = "Go to"
 
+    def _get_spool_dim(self, instance):
+        return SpoolDimension.objects.filter(spool_model_id=instance.spool_model.pk, actual=True).first()
+
+    def _get_reducer_dim(self, instance):
+        return ReducerDimension.objects.filter(reducer_model_id=instance.pk, actual=True).first()
+
     def spool_d1(self, instance):
-        return instance.spool_model.D1
+        spool_dim = self._get_spool_dim(instance)
+        return spool_dim.D1 if spool_dim else None
 
     spool_d1.short_description = "D1"
 
     def spool_d2(self, instance):
-        return instance.spool_model.D2
+        spool_dim = self._get_spool_dim(instance)
+        return spool_dim.D2 if spool_dim else None
 
     spool_d2.short_description = "D2"
 
     def spool_h1(self, instance):
-        return instance.spool_model.H1
-
+        spool_dim = self._get_spool_dim(instance)
+        return spool_dim.H1 if spool_dim else None
     spool_h1.short_description = "H1"
+
+    def reducer_d3(self, instance):
+        reducer_dim = self._get_reducer_dim(instance)
+        return reducer_dim.D3 if reducer_dim else None
+
+    reducer_d3.short_description = "D3"
+
+    def reducer_d4(self, instance):
+        reducer_dim = self._get_reducer_dim(instance)
+        return reducer_dim.D4 if reducer_dim else None
+
+    reducer_d4.short_description = "D4"
+
+    def reducer_h2(self, instance):
+        reducer_dim = self._get_reducer_dim(instance)
+        return reducer_dim.H2 if reducer_dim else None
+    reducer_h2.short_description = "H2"
+
 
 
 class MarkNewInstancesAsChangedModelForm(ModelForm):
