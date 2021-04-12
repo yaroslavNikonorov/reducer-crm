@@ -14,7 +14,7 @@ class Line(models.Model):
 
 
 class Manufacturer(models.Model):
-    name = models.CharField(max_length=200, null=False, primary_key=True, unique=True)
+    name = models.CharField(max_length=200, null=False, unique=True)
 
     def get_related_ent(self):
         return Model
@@ -24,8 +24,8 @@ class Manufacturer(models.Model):
 
 
 class Model(models.Model):
-    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200, null=False, primary_key=True, unique=True)
+    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE, default=1)
+    name = models.CharField(max_length=200, null=False, unique=True)
 
     def get_related_ent(self):
         return SpoolModel
@@ -35,9 +35,9 @@ class Model(models.Model):
 
 
 class SpoolModel(models.Model):
-    model = models.ForeignKey(Model, on_delete=models.CASCADE)
+    model = models.ForeignKey(Model, on_delete=models.CASCADE, default=1)
     name = models.CharField(max_length=200, null=True, blank=True, unique=False, default="")
-    size = models.IntegerField(default=10000, null=True, blank=True)
+    size = models.IntegerField(default=None, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
     description = models.TextField(null=True, blank=True)
@@ -46,12 +46,12 @@ class SpoolModel(models.Model):
         return ReducerModel
 
     def __str__(self):
-        return "{} {}".format(self.model, str(self.size))
+        return "{} {}".format(self.model, self.name)
 
 
 class SpoolDimension(models.Model):
     actual = models.BooleanField(default=False)
-    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE)
+    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE, default=1)
     D1 = models.FloatField(default=1.0, help_text="Spool D1", null=False)
     D2 = models.FloatField(default=1.0, help_text="Spool D2", null=False)
     H1 = models.FloatField(default=1.0, help_text="Spool H1", null=False)
@@ -70,7 +70,7 @@ class SpoolDimension(models.Model):
 
 
 class SpoolModelImage(models.Model):
-    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE)
+    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE, default=1)
     img_height = models.PositiveIntegerField(default=100)
     img_width = models.PositiveIntegerField(default=100)
     image = models.ImageField(storage=default_storage, upload_to="spool_images", null=True, blank=True,
@@ -81,7 +81,7 @@ class SpoolModelImage(models.Model):
 
 
 class ReducerModel(models.Model):
-    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE, null=False)
+    spool_model = models.ForeignKey(SpoolModel, on_delete=models.CASCADE, null=False, default=1)
     line = models.ForeignKey(Line, default=1, on_delete=models.CASCADE, null=False)
     description = models.TextField(null=True, blank=True)
 
@@ -96,7 +96,7 @@ class ReducerModel(models.Model):
 
 class ReducerDimension(models.Model):
     actual = models.BooleanField(default=False)
-    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE)
+    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE, default=1)
     D3 = models.FloatField(default=1.0, help_text="Spool D3", null=False)
     D4 = models.FloatField(default=1.0, help_text="Spool D4", null=False)
     H2 = models.FloatField(default=1.0, help_text="Spool H2", null=False)
@@ -115,7 +115,7 @@ class ReducerDimension(models.Model):
 
 
 class ReducerModelImage(models.Model):
-    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE)
+    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE, default=1)
     img_height = models.PositiveIntegerField(default=100)
     img_width = models.PositiveIntegerField(default=100)
     image = models.ImageField(storage=default_storage, upload_to="reducer_images", null=True, blank=True,
@@ -143,7 +143,6 @@ def group_name():
 
 
 class OrderGroup(models.Model):
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=200, null=False, unique=True, default=group_name)
     created = models.DateTimeField(auto_now_add=True)
     description = models.TextField(null=True, blank=True)
@@ -164,7 +163,6 @@ def order_name():
 
 
 class Order(models.Model):
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=200, null=False, unique=True, default=order_name)
     order_group = models.ForeignKey(OrderGroup, on_delete=models.CASCADE, default=1)
     payed = models.BooleanField(default=False)
@@ -183,10 +181,9 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    id = models.AutoField(primary_key=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, default=1)
-    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE, null=False)
-    price = models.ForeignKey(Price, on_delete=models.CASCADE, null=False)
+    reducer_model = models.ForeignKey(ReducerModel, on_delete=models.CASCADE, null=False, default=1)
+    price = models.ForeignKey(Price, on_delete=models.CASCADE, null=False, default=1)
     amount = models.IntegerField(default=2)
     printed = models.BooleanField(default=False)
     description = models.TextField(null=True, blank=True, )
