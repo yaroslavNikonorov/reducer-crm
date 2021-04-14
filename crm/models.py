@@ -71,7 +71,7 @@ class SpoolDimension(models.Model):
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if self.actual:
             # select all other active items
-            qs = type(self).objects.filter(actual=True)
+            qs = type(self).objects.filter(spool_model=self.spool_model, actual=True)
             # except self (if self already exists)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
@@ -113,12 +113,13 @@ class ReducerDimension(models.Model):
     D3 = models.FloatField(default=1.0, help_text="Spool D3", null=False)
     D4 = models.FloatField(default=1.0, help_text="Spool D4", null=False)
     H2 = models.FloatField(default=1.0, help_text="Spool H2", null=False)
+    shift = models.FloatField(default=0, help_text="Shift")
     description = models.CharField(max_length=200, null=True, blank=True, unique=False, default="")
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if self.actual:
             # select all other active items
-            qs = type(self).objects.filter(actual=True)
+            qs = type(self).objects.filter(reducer_model=self.reducer_model, actual=True)
             # except self (if self already exists)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
@@ -164,6 +165,7 @@ def group_name():
 class OrderGroup(models.Model):
     class Meta:
         ordering = ['created', 'name']
+
     name = models.CharField(max_length=200, null=False, unique=True, default=group_name)
     created = models.DateTimeField(auto_now_add=True)
     description = models.TextField(null=True, blank=True)
