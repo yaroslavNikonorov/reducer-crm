@@ -7,7 +7,8 @@ from django.utils.html import format_html_join, format_html
 from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
-from crm.models import Order, SpoolModel, Line, Price, Manufacturer, Model, ReducerModel, OrderGroup, SpoolModelImage, \
+from crm.models import OrderBucket, SpoolModel, Line, Price, ReelManufacturer, ReelModel, ReducerModel, OrderGroup, \
+    SpoolModelImage, \
     ReducerModelImage, OrderItem, SpoolDimension, ReducerDimension
 
 
@@ -30,28 +31,51 @@ def camel_to_snake(string):
     return '_'.join([i.lower() for i in groups])
 
 
-@admin.register(OrderItem, Line, Price)
-class CrmAdmin(admin.ModelAdmin):
-    pass
+# @admin.register(OrderItem, Line, Price)
+# class CrmAdmin(admin.ModelAdmin):
+#     pass
 
 
-@admin.register(Manufacturer, Model)
-class RelationList(admin.ModelAdmin):
-    readonly_fields = ['relation_list']
+class ReelManufacturerInline(admin.TabularInline):
+    model = ReelModel
+    # show_change_link = True
+    extra = 0
 
-    # fieldsets = [
-    #     (None, {'fields': ['']}),
-    #     ('Relations', {'fields': ['relation_list']}),
-    # ]
+    fields = ["_url"]
+    readonly_fields = ['_url']
 
-    def relation_list(self, instance):
-        class_name = camel_to_snake(instance.__class__.__name__)
-        filter_key = class_name + "_id"
-        filter_dict = {filter_key: instance.pk}
-        models = instance.get_related_ent().objects.filter(**filter_dict)
-        return format_list(models)
+    def has_change_permission(self, request, obj=None):
+        False
 
-    relation_list.short_description = "Related Entities"
+    def _url(self, inst):
+        return mark_safe('<a href="{url}">{name}</a>'.format(url=get_admin_url(inst), name=str(inst)))
+
+    _url.short_description = "Reel Model"
+
+
+@admin.register(ReelManufacturer)
+class ReelManufacturerAdmin(admin.ModelAdmin):
+    inlines = [ReelManufacturerInline]
+
+
+class ReelModelInline(admin.TabularInline):
+    model = SpoolModel
+    show_change_link = True
+    extra = 0
+
+    fields = ["_url"]
+    readonly_fields = ['_url']
+
+    def has_change_permission(self, request, obj=None):
+        False
+
+    def _url(self, inst):
+        return mark_safe('<a href="{url}">{name}</a>'.format(url=get_admin_url(inst), name=str(inst)))
+
+
+@admin.register(ReelModel)
+class ReelModelAdmin(admin.ModelAdmin):
+    inlines = [ReelModelInline]
 
 
 class SpoolModelImageInline(admin.TabularInline):
@@ -130,10 +154,11 @@ class SpoolModelReducerInline(admin.TabularInline):
 class SpoolModelAdmin(VersionAdmin):
     inlines = [SpoolModelDimInline, SpoolModelReducerInline, SpoolModelImageInline]
     fieldsets = [
-        ("SpoolModel", {'fields': ['model', 'name', 'size']}),
+        ("SpoolModel", {'fields': ['reel_model', 'name', 'size']}),
         # ("Dimensions", {'fields': ['D1', 'D2', 'H1']}),
         # ('Relations', {'fields': ['relation_list']}),
     ]
+    list_display = ["__str__"]
 
 
 class ReducerModelImageInline(admin.TabularInline):
@@ -175,20 +200,24 @@ class ReducerModelDimInline(admin.TabularInline):
 class ReducerModelAdmin(VersionAdmin):
     inlines = [ReducerModelDimInline, ReducerModelImageInline]
     # fields = ['spool_d1']
-    readonly_fields = ("spool_name", "spool_d1", "spool_d2", "spool_h1",'reducer_d3', 'reducer_d4', 'reducer_h2')
+    readonly_fields = ("spool_url", "spool_d1", "spool_d2", "spool_h1", 'reducer_d3', 'reducer_d4', 'reducer_h2')
     fieldsets = [
-        ("SpoolModel", {'fields': [("spool_model", "spool_name")]}),
+        ("SpoolModel", {'fields': [("spool_model", "spool_url")]}),
         ("Line", {"fields": ["line"]}),
         # ("Reducer Dimensions", {'fields': ['spool_d1', 'spool_d2', 'D3', 'D4', 'spool_h1', 'H2']}),
-        ("Reducer Dimensions", {'fields': ['spool_d1', 'spool_d2', 'reducer_d3', 'reducer_d4', 'spool_h1', 'reducer_h2']}),
+        ("Reducer Dimensions",
+         {'fields': ['spool_d1', 'spool_d2', 'reducer_d3', 'reducer_d4', 'spool_h1', 'reducer_h2']}),
         # ('Relations', {'fields': ['relation_list']}),
     ]
 
-    def spool_name(self, instance):
+    list_display = ["spool_model", "line", 'spool_d1', 'spool_d2', 'reducer_d3', 'reducer_d4', 'spool_h1', 'reducer_h2']
+    ordering = ["spool_model", "line"]
+
+    def spool_url(self, instance):
         return mark_safe('<a href="{url}">{name}</a>'.format(url=get_admin_url(instance.spool_model),
                                                              name=str(instance.spool_model)))
 
-    spool_name.short_description = "Go to"
+    spool_url.short_description = "URL"
 
     def _get_spool_dim(self, instance):
         return SpoolDimension.objects.filter(spool_model_id=instance.spool_model.pk, actual=True).first()
@@ -211,6 +240,7 @@ class ReducerModelAdmin(VersionAdmin):
     def spool_h1(self, instance):
         spool_dim = self._get_spool_dim(instance)
         return spool_dim.H1 if spool_dim else None
+
     spool_h1.short_description = "H1"
 
     def reducer_d3(self, instance):
@@ -228,8 +258,8 @@ class ReducerModelAdmin(VersionAdmin):
     def reducer_h2(self, instance):
         reducer_dim = self._get_reducer_dim(instance)
         return reducer_dim.H2 if reducer_dim else None
-    reducer_h2.short_description = "H2"
 
+    reducer_h2.short_description = "H2"
 
 
 class MarkNewInstancesAsChangedModelForm(ModelForm):
@@ -241,7 +271,7 @@ class MarkNewInstancesAsChangedModelForm(ModelForm):
 
 class OrderGroupNotSentInline(admin.TabularInline):
     extra = 0
-    model = Order
+    model = OrderBucket
     form = MarkNewInstancesAsChangedModelForm
     fields = ['name']
     # readonly_fields = ['order_url', ]
@@ -259,7 +289,7 @@ class OrderGroupNotSentInline(admin.TabularInline):
 
 class OrderGroupSentInline(admin.TabularInline):
     extra = 0
-    model = Order
+    model = OrderBucket
     # form = MarkNewInstancesAsChangedModelForm
     fields = ['order_url']
     readonly_fields = ['order_url', ]
@@ -294,7 +324,7 @@ class OrderGroupAdmin(VersionAdmin):
     # orders_list.short_description = "Related Orders"
 
     def get_sum(self, instance):
-        orders = Order.objects.filter(order_group_id=instance.pk)
+        orders = OrderBucket.objects.filter(order_group_id=instance.pk)
         return format_html("{}", sum(map(lambda o: o.get_order_sum(), orders))) or mark_safe(
             "<span class='errors'>No orders.</span>")
 
@@ -321,7 +351,7 @@ class OrderInline(admin.TabularInline):
     #     return mark_safe('<a href="{url}">{name}</a>'.format(url=get_admin_url(inst), name=str(inst)))
 
 
-@admin.register(Order)
+@admin.register(OrderBucket)
 class OrderAdmin(VersionAdmin):
     readonly_fields = ['order_group_url']
     inlines = [OrderInline]
