@@ -31,9 +31,9 @@ def camel_to_snake(string):
     return '_'.join([i.lower() for i in groups])
 
 
-# @admin.register(OrderItem, Line, Price)
-# class CrmAdmin(admin.ModelAdmin):
-#     pass
+@admin.register(OrderItem, Line, Price)
+class CrmAdmin(admin.ModelAdmin):
+    pass
 
 
 class ReelManufacturerInline(admin.TabularInline):
@@ -60,7 +60,7 @@ class ReelManufacturerAdmin(admin.ModelAdmin):
 
 class ReelModelInline(admin.TabularInline):
     model = SpoolModel
-    show_change_link = True
+    # show_change_link = True
     extra = 0
 
     fields = ["_url"]

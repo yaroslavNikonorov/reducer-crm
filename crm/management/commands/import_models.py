@@ -36,15 +36,15 @@ class Command(BaseCommand):
                     if self._record_empty(record):
                         continue
 
+                    if not record.get('line') and not record.get("model"):
+                        record['line'] = current_line
+                    else:
+                        current_line = record.get("line")
+
                     if not record.get('model'):
                         record['model'] = current_model
                     else:
                         current_model = record['model']
-
-                    if not record.get('line'):
-                        record['line'] = current_line
-                    else:
-                        current_line = record.get("line")
 
                     self._handle_record(record)
 
@@ -131,7 +131,7 @@ class Command(BaseCommand):
     def _valid_float(self, value: Union[str, float]) -> float:
         if isinstance(value, float):
             return value
-        return float(value.replace(",", "."))
+        return float(value.strip().replace(",", ".").replace(" ", ''))
 
     def _get_spool(self, model_obj: ReelModel, record: dict):
         spool_name = " ".join(record.get("model").strip().split("_")[2:])
@@ -157,8 +157,10 @@ class Command(BaseCommand):
             reel_manufacturer=man_obj)
         return model_obj
 
-    def _get_line(self, line: str):
+    def _get_line(self, line: str = "") -> Line:
         # diameter, length = line.strip().split('-')
+        if not line:
+            line = "0-0"
         line_list = line.strip().split('-')
         if len(line_list) < 2:
             line_list.append("0")
